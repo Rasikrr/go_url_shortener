@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"go_url_chortener_api/internal/config"
+	"go_url_chortener_api/internal/storage"
 )
 
 type Storage struct {
@@ -73,9 +74,19 @@ func (s *Storage) GetURL(alias string) (string, error) {
 func (s *Storage) DeleteURL(alias string) error {
 	const fn = "storage.postgres.DeleteURL"
 	query := `DELETE FROM url WHERE alias=$1`
-	_, err := s.db.Exec(query, alias)
+	res, err := s.db.Exec(query, alias)
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
+
+	deleted, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if deleted < 1 {
+		return storage.ErrURLNotFound
+	}
+	
 	return nil
 }
