@@ -7,7 +7,7 @@ import (
 
 type PasswordHasher interface {
 	Hash(string) (string, error)
-	CheckPassword(string, string) (bool, error)
+	CheckPassword(hash string, password string) error
 }
 
 type SHA1Hasher struct {
@@ -29,12 +29,12 @@ func (h *SHA1Hasher) Hash(password string) (string, error) {
 	return string(hash), nil
 }
 
-func (h *SHA1Hasher) CheckPassword(hashedPassword string, password string) (bool, error) {
+func (h *SHA1Hasher) CheckPassword(hashedPassword string, password string) error {
 	const fn = "lib.hash.CheckPassword"
 
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		return false, fmt.Errorf("%s : %w", fn, err)
+		return fmt.Errorf("%s : %w", fn, err)
 	}
-	return true, nil
+	return nil
 }

@@ -4,10 +4,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go_url_chortener_api/internal/config"
+	"go_url_chortener_api/internal/http-server/handlers/auth/signin"
 	"go_url_chortener_api/internal/http-server/handlers/auth/signup"
 	"go_url_chortener_api/internal/http-server/handlers/del"
 	"go_url_chortener_api/internal/http-server/handlers/redirect"
 	"go_url_chortener_api/internal/http-server/handlers/url/save"
+	"go_url_chortener_api/internal/http-server/middleware/myJwt"
+	"go_url_chortener_api/internal/lib/hash"
 	"go_url_chortener_api/internal/lib/logger/sl"
 	"go_url_chortener_api/internal/lib/logger/slogpretty"
 	"go_url_chortener_api/internal/storage/postgres"
@@ -19,6 +22,8 @@ import (
 const (
 	envLocal = "local"
 	envDev   = "dev"
+
+	salt = 5
 )
 
 func main() {
@@ -32,6 +37,8 @@ func main() {
 		return
 	}
 
+	hasher := hash.NewSHA1Hasher(salt)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -40,11 +47,16 @@ func main() {
 	router.Use(middleware.URLFormat)
 
 	router.Route("/auth", func(r chi.Router) {
-		r.Post("/signup", signup.New(log, storage))
-		//r.Post().Post("/signin", signin)
+		r.Post("/signup", signup.New(log, storage, hasher))
+		r.Post("/signin", signin.New(log, storage, hasher))
 	})
 
-	router.Post("/url", save.New(log, storage))
+	router.Route("/url", func(r chi.Router) {
+		r.Use(myJwt.JwtMiddleware)
+		r.Post("/", save.New(log, storage))
+		// TODO add DELETE
+	})
+
 	router.Get("/{alias}", redirect.New(log, storage))
 	router.Delete("/{alias}", del.New(log, storage))
 

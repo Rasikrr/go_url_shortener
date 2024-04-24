@@ -40,7 +40,7 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		tokenClaims := token.Claims.(jwt.MapClaims)
-		if tokenClaims["id"].(int64) != int64(id) {
+		if int(tokenClaims["id"].(float64)) != id {
 			fmt.Println("id's do not match")
 			permissionDenied(w)
 			return
@@ -54,7 +54,7 @@ func getJWT(r *http.Request) (string, error) {
 	if tokenBearer == "" {
 		return "", fmt.Errorf("token is empty")
 	}
-	token := strings.Split(tokenBearer, "")
+	token := strings.Split(tokenBearer, " ")
 	if len(token) != 2 {
 		return "", fmt.Errorf("token is invalid: %s", tokenBearer)
 	}
@@ -73,7 +73,7 @@ func getIdCookie(r *http.Request) (int, error) {
 	return id, err
 }
 
-func createJWT(id int, email string) (string, error) {
+func CreateJWT(id int, email string) (string, error) {
 	claims := jwtClaims{
 		Id:    id,
 		Email: email,
@@ -84,6 +84,20 @@ func createJWT(id int, email string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(middleware.JwtSecret))
+}
+
+func SetJWTHeader(w http.ResponseWriter, token string) {
+	w.Header().Set("Authorization", "Bearer "+token)
+}
+
+func SetIdCookie(w http.ResponseWriter, id int) {
+	idStr := strconv.Itoa(id)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "id",
+		Value:    idStr,
+		Path:     "/",
+		HttpOnly: true,
+	})
 }
 
 func validateJWT(tknStr string) (*jwt.Token, error) {

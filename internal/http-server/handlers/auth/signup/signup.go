@@ -16,7 +16,6 @@ import (
 )
 
 const passwordLength = 8
-const salt = 5
 
 var (
 	passwordDoNotMatchErr = errors.New("password do not match")
@@ -37,7 +36,7 @@ type UserSaver interface {
 	SaveUser(user *domain.User) error
 }
 
-func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
+func New(log *slog.Logger, userSaver UserSaver, hasher hash.PasswordHasher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.auth.signup.New"
 		log.With(
@@ -78,7 +77,7 @@ func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
 			customJson.WriteJson(w, http.StatusBadRequest, resp.Error(err.Error()))
 			return
 		}
-		encPassword, err := hash.NewSHA1Hasher(salt).Hash(req.Password1)
+		encPassword, err := hasher.Hash(req.Password1)
 		if err != nil {
 			log.Error("failed to hash password", sl.Err(err))
 			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("server error"))
