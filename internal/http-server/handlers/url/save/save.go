@@ -64,12 +64,12 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		}
 		err = urlSaver.SaveURL(req.URL, alias)
 		if errors.Is(err, storage.ErrURLExists) {
-			log.Info("url already exists", slog.String("url", req.URL))
+			log.Error("url already exists", slog.String("url", req.URL))
 			customJson.WriteJson(w, http.StatusBadRequest, resp.Error("url already exists"))
 			return
 		}
 		if err != nil {
-			log.Error("filed to add url", sl.Err(err))
+			log.Error("failed to add url", sl.Err(err))
 			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("failed to add error"))
 			return
 		}

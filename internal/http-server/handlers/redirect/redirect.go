@@ -31,7 +31,7 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 		}
 		log.Info("url sent")
 		log.Info("redirecting...")
-		http.Redirect(w, r, urlToResp, http.StatusOK)
+		http.Redirect(w, r, urlToResp, http.StatusFound)
 	}
 }
 

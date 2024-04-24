@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go_url_chortener_api/internal/config"
+	"go_url_chortener_api/internal/http-server/handlers/auth/signup"
 	"go_url_chortener_api/internal/http-server/handlers/del"
 	"go_url_chortener_api/internal/http-server/handlers/redirect"
 	"go_url_chortener_api/internal/http-server/handlers/url/save"
@@ -37,6 +38,11 @@ func main() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+
+	router.Route("/auth", func(r chi.Router) {
+		r.Post("/signup", signup.New(log, storage))
+		//r.Post().Post("/signin", signin)
+	})
 
 	router.Post("/url", save.New(log, storage))
 	router.Get("/{alias}", redirect.New(log, storage))
