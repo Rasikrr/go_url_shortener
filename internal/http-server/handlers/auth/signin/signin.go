@@ -5,6 +5,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go_url_chortener_api/internal/domain"
 	"go_url_chortener_api/internal/http-server/customJson"
+	"go_url_chortener_api/internal/http-server/handlers/refresh"
 	"go_url_chortener_api/internal/http-server/middleware/myJwt"
 	resp "go_url_chortener_api/internal/lib/api/response"
 	"go_url_chortener_api/internal/lib/hash"
@@ -18,11 +19,12 @@ type Request struct {
 	Password string `json:"password" validate:"required"`
 }
 
-type UserGetter interface {
+type SignInner interface {
 	GetUser(email string) (*domain.User, error)
+	SaveRefresh(string, int) error
 }
 
-func New(log *slog.Logger, userGetter UserGetter, hasher hash.PasswordHasher) http.HandlerFunc {
+func New(log *slog.Logger, signInner SignInner, hasher hash.PasswordHasher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "handlers.auth.signin.New"
 		log.With(
@@ -44,7 +46,7 @@ func New(log *slog.Logger, userGetter UserGetter, hasher hash.PasswordHasher) ht
 			return
 		}
 
-		user, err := userGetter.GetUser(req.Email)
+		user, err := signInner.GetUser(req.Email)
 		if err != nil {
 			log.Error("failed to find user", sl.Err(err))
 			customJson.WriteJson(w, http.StatusBadRequest, resp.Error("user with this email not found"))
@@ -63,8 +65,27 @@ func New(log *slog.Logger, userGetter UserGetter, hasher hash.PasswordHasher) ht
 			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("server error"))
 			return
 		}
+
+		refreshToken, err := refresh.CreateRefresh(user.Id)
+		if err != nil {
+			log.Error("failed to create refresh token", sl.Err(err))
+			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("server error"))
+			return
+		}
+
+		// TODO check if refresh exists
+
+		if err := signInner.SaveRefresh(refreshToken, user.Id); err != nil {
+			log.Error("failed to create refresh token", sl.Err(err))
+			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("server error"))
+			return
+		}
+
 		myJwt.SetJWTHeader(w, jwtToken)
 		myJwt.SetIdCookie(w, user.Id)
+
+		refresh.SetRefreshCookie(w, refreshToken)
+
 		customJson.WriteJson(w, http.StatusOK, map[string]string{
 			"jwt": jwtToken,
 		})

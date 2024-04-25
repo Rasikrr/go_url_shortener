@@ -6,7 +6,10 @@ import (
 	"os"
 )
 
-var JwtSecret string
+var (
+	JwtSecret     string
+	RefreshSecret string
+)
 
 func Init() {
 	err := godotenv.Load("./.env")
@@ -14,4 +17,6 @@ func Init() {
 		log.Fatal(err)
 	}
 	JwtSecret = os.Getenv("JWT_SECRET")
+	RefreshSecret = os.Getenv("REFRESH_SECRET")
+
 }

@@ -28,8 +28,8 @@ var (
 
 type Request struct {
 	Email     string `json:"email" validate:"required,email"`
-	Password1 string `json:"password1" validate:""`
-	Password2 string `json:"password2"`
+	Password1 string `json:"password1" validate:"required"`
+	Password2 string `json:"password2" validate:"required"`
 }
 
 type UserSaver interface {

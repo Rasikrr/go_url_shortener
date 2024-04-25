@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	"go_url_chortener_api/internal/config"
 	"go_url_chortener_api/internal/domain"
+	"go_url_chortener_api/internal/http-server/handlers/refresh"
 	"go_url_chortener_api/internal/storage"
 )
 
@@ -34,7 +35,19 @@ func NewStorage(storageCfg *config.Storage) (*Storage, error) {
 		return nil, err
 	}
 
-	_, err = db.Exec(
+	if err := createTables(db); err != nil {
+		return nil, err
+	}
+
+	return &Storage{
+		db: db,
+	}, nil
+}
+
+func createTables(db *sql.DB) error {
+	const fn = "storage.postgres.createTables"
+
+	_, err := db.Exec(
 		`CREATE TABLE IF NOT EXISTS url(
     			id SERIAL PRIMARY KEY,
     			alias TEXT NOT NULL UNIQUE,
@@ -43,7 +56,7 @@ func NewStorage(storageCfg *config.Storage) (*Storage, error) {
 				    );
 			`)
 	if err != nil {
-		return nil, fmt.Errorf("%s : %w", fn, err)
+		return fmt.Errorf("%s : %w", fn, err)
 	}
 
 	_, err = db.Exec(`
@@ -54,11 +67,21 @@ func NewStorage(storageCfg *config.Storage) (*Storage, error) {
 				);
 			`)
 	if err != nil {
-		return nil, fmt.Errorf("%s : %w", fn, err)
+		return fmt.Errorf("%s : %w", fn, err)
 	}
-	return &Storage{
-		db: db,
-	}, nil
+
+	_, err = db.Exec(
+		`CREATE TABLE IF NOT EXISTS refresh_token(
+    				id SERIAL PRIMARY KEY,
+    				token VARCHAR(256),
+    				user_id INT,
+    				CONSTRAINT refresh_user_fk FOREIGN KEY (user_id) REFERENCES users(id)
+				);
+			`)
+	if err != nil {
+		return fmt.Errorf("%s : %w", fn, err)
+	}
+	return nil
 }
 
 func (s *Storage) SaveURL(urlToSave string, alias string) error {
@@ -117,6 +140,22 @@ func (s *Storage) GetUser(email string) (*domain.User, error) {
 	return user, nil
 }
 
+func (s *Storage) GetUserById(id int) (*domain.User, error) {
+	const fn = "storage.postgres.GetUserById"
+
+	query := `SELECT * FROM users WHERE id=$1`
+
+	user := new(domain.User)
+	row := s.db.QueryRow(query, id)
+
+	err := row.Scan(&user.Id, &user.Email, &user.EncPassword)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s : %w", fn, err)
+	}
+	return user, nil
+}
+
 func (s *Storage) SaveUser(user *domain.User) error {
 	const fn = "storage.postgres.SaveUser"
 	query := `INSERT INTO users(email, enc_password)
@@ -127,4 +166,51 @@ func (s *Storage) SaveUser(user *domain.User) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) SaveRefresh(token string, userId int) error {
+	const fn = "storage.postgres.SaveRefresh"
+
+	query := `INSERT INTO refresh_token (token, user_id)
+				VALUES ($1, $2)`
+
+	if _, err := s.db.Exec(query, token, userId); err != nil {
+		return fmt.Errorf("%s : %w", fn, err)
+	}
+	return nil
+
+}
+
+func (s *Storage) GetRefresh(userId int) (*refresh.Token, error) {
+	const fn = "storage.postgres.GetRefresh"
+
+	query := `SELECT * FROM refresh_token WHERE user_id=$1`
+
+	row := s.db.QueryRow(query, userId)
+
+	token := new(refresh.Token)
+
+	if err := row.Scan(&token.Id, &token.Token, &token.UserId); err != nil {
+		return nil, fmt.Errorf("%s : %w", fn, err)
+	}
+	return token, nil
+}
+
+func (s *Storage) DeleteRefresh(id int) error {
+	const fn = "storage.postgres.DeleteRefresh"
+	query := `DELETE FROM refresh_token WHERE id=$1`
+	if _, err := s.db.Exec(query, id); err != nil {
+		return fmt.Errorf("%s : %w", fn, err)
+	}
+	return nil
+}
+
+func (s *Storage) UpdateRefresh(id int, token string) error {
+	const fn = "storage.postgres.UpdateRefresh"
+	query := `UPDATE refresh_token SET token=$1 WHERE id=$2`
+	if _, err := s.db.Exec(query, token, id); err != nil {
+		return fmt.Errorf("%s : %w", err)
+	}
+	return nil
+
 }

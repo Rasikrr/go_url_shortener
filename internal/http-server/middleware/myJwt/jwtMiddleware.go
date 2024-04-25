@@ -78,7 +78,7 @@ func CreateJWT(id int, email string) (string, error) {
 		Id:    id,
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * 40)),
 		},
 	}
 

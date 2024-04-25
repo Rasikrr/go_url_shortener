@@ -8,6 +8,7 @@ import (
 	"go_url_chortener_api/internal/http-server/handlers/auth/signup"
 	"go_url_chortener_api/internal/http-server/handlers/del"
 	"go_url_chortener_api/internal/http-server/handlers/redirect"
+	"go_url_chortener_api/internal/http-server/handlers/refresh"
 	"go_url_chortener_api/internal/http-server/handlers/url/save"
 	"go_url_chortener_api/internal/http-server/middleware/myJwt"
 	"go_url_chortener_api/internal/lib/hash"
@@ -49,6 +50,7 @@ func main() {
 	router.Route("/auth", func(r chi.Router) {
 		r.Post("/signup", signup.New(log, storage, hasher))
 		r.Post("/signin", signin.New(log, storage, hasher))
+		r.Get("/refresh", refresh.New(log, storage))
 	})
 
 	router.Route("/url", func(r chi.Router) {
