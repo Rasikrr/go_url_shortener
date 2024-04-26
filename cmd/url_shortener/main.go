@@ -54,13 +54,12 @@ func main() {
 	})
 
 	router.Route("/url", func(r chi.Router) {
-		r.Use(myJwt.JwtMiddleware)
+		r.Use(myJwt.JwtMiddleware(log))
 		r.Post("/", save.New(log, storage))
-		// TODO add DELETE
+		r.Delete("/{alias}", del.New(log, storage))
 	})
 
 	router.Get("/{alias}", redirect.New(log, storage))
-	router.Delete("/{alias}", del.New(log, storage))
 
 	log.Info("starting server...",
 		slog.String("address", cfg.HttpServer.Address+":"+cfg.HttpServer.Port),
@@ -73,9 +72,10 @@ func main() {
 		WriteTimeout: cfg.HttpServer.Timeout,
 		ReadTimeout:  cfg.HttpServer.Timeout,
 	}
-	srv.ListenAndServe()
-
-	log.Error("server stopped")
+	if err := srv.ListenAndServe(); err != nil {
+		log.Error("server stopped")
+		panic(err)
+	}
 
 }
 
