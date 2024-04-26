@@ -75,7 +75,7 @@ func createTables(db *sql.DB) error {
     				id SERIAL PRIMARY KEY,
     				token VARCHAR(256),
     				user_id INT,
-    				CONSTRAINT refresh_user_fk FOREIGN KEY (user_id) REFERENCES users(id)
+    				CONSTRAINT refresh_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 				);
 			`)
 	if err != nil {
@@ -196,10 +196,20 @@ func (s *Storage) GetRefresh(userId int) (*refresh.Token, error) {
 	return token, nil
 }
 
-func (s *Storage) DeleteRefresh(id int) error {
+func (s *Storage) DeleteRefresh(token string) error {
 	const fn = "storage.postgres.DeleteRefresh"
-	query := `DELETE FROM refresh_token WHERE id=$1`
-	if _, err := s.db.Exec(query, id); err != nil {
+	query := `DELETE FROM refresh_token WHERE token=$1`
+	if _, err := s.db.Exec(query, token); err != nil {
+		return fmt.Errorf("%s : %w", fn, err)
+	}
+	return nil
+}
+
+func (s *Storage) DeleteRefreshByUserId(id int) error {
+	const fn = "storage.postgres.DeleteRefreshByUserId"
+	query := `DELETE FROM refresh_token WHERE user_id=$1`
+	_, err := s.db.Exec(query, id)
+	if err != nil {
 		return fmt.Errorf("%s : %w", fn, err)
 	}
 	return nil

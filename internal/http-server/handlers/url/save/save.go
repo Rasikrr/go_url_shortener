@@ -18,8 +18,6 @@ type Request struct {
 	Alias string `json:"alias,omitempty"`
 }
 
-// TODO: move to config
-
 const aliasLength = 6
 
 type Response struct {
@@ -58,7 +56,6 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			return
 		}
 		alias := req.Alias
-		// TODO handle alias exists error
 		if alias == "" {
 			alias = random.NewRandomString(aliasLength)
 		}

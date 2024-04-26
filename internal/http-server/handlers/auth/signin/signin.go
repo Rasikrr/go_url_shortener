@@ -22,6 +22,7 @@ type Request struct {
 type SignInner interface {
 	GetUser(email string) (*domain.User, error)
 	SaveRefresh(string, int) error
+	DeleteRefreshByUserId(int) error
 }
 
 func New(log *slog.Logger, signInner SignInner, hasher hash.PasswordHasher) http.HandlerFunc {
@@ -54,7 +55,7 @@ func New(log *slog.Logger, signInner SignInner, hasher hash.PasswordHasher) http
 		}
 		if err := hasher.CheckPassword(user.EncPassword, req.Password); err != nil {
 			log.Error("failed to match password", sl.Err(err))
-			customJson.WriteJson(w, http.StatusBadRequest, resp.Error(err.Error()))
+			customJson.WriteJson(w, http.StatusBadRequest, resp.Error("invalid password"))
 			return
 		}
 
@@ -73,7 +74,12 @@ func New(log *slog.Logger, signInner SignInner, hasher hash.PasswordHasher) http
 			return
 		}
 
-		// TODO check if refresh exists
+		if err := signInner.DeleteRefreshByUserId(user.Id); err != nil {
+			log.Error("")
+			customJson.WriteJson(w, http.StatusInternalServerError, resp.Error("server error"))
+			return
+		}
+		log.Info("old refresh token was deleted")
 
 		if err := signInner.SaveRefresh(refreshToken, user.Id); err != nil {
 			log.Error("failed to create refresh token", sl.Err(err))

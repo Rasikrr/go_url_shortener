@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const jwtTokenLifetime = time.Minute * 15
+
 type jwtClaims struct {
 	Id    int    `json:"id"`
 	Email string `json:"email"`
@@ -86,7 +88,7 @@ func CreateJWT(id int, email string) (string, error) {
 		Id:    id,
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * 40)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtTokenLifetime)),
 		},
 	}
 

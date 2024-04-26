@@ -20,7 +20,7 @@ type Token struct {
 type Refresher interface {
 	GetUserById(int) (*domain.User, error)
 	GetRefresh(userId int) (*Token, error)
-	DeleteRefresh(id int) error
+	DeleteRefresh(token string) error
 	UpdateRefresh(id int, token string) error
 }
 
@@ -39,6 +39,9 @@ func New(log *slog.Logger, refresher Refresher) http.HandlerFunc {
 		}
 		token, err := validateRefresh(refToken)
 		if err != nil {
+			if err := refresher.DeleteRefresh(refToken); err != nil {
+				log.Error("failed to delete refresh token", sl.Err(err))
+			}
 			log.Error("failed to validate refresh token", sl.Err(err))
 			customJson.WriteJson(w, http.StatusForbidden, resp.Error("invalid request"))
 			return

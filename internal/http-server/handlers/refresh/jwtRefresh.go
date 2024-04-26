@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const refreshTokenLifetime = time.Hour * 24 * 30
+
 type tokenClaims struct {
 	UserId int `json:"userId"`
 	*jwt.RegisteredClaims
@@ -17,7 +19,7 @@ func CreateRefresh(userId int) (string, error) {
 	claims := &tokenClaims{
 		UserId: userId,
 		RegisteredClaims: &jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 30)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshTokenLifetime)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
